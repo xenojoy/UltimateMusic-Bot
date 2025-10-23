@@ -25,12 +25,12 @@ module.exports = {
                 .setColor(0x1DB954)
                 .setDescription(
                     'Need help or have questions? Join our official support server:\n' +
-                    '[Support Server](https://discord.gg/xQF9f9yUEM)\n\n' +
+                    '[Support Server](https://discord.gg/VKSUyhGr6q)\n\n' +
                     'For direct inquiries, contact: **GlaceYT**\n\n' +
                     'Website: https://glaceyt.com'
                 )
                 .setTimestamp()
-                .setFooter({ text: 'Ultimate Music Bot • Developed by GlaceYT' });
+                .setFooter({ text: 'TSL 71 Music Bot • Developed by Joy' });
             
             await message.reply({ embeds: [embed] });
         } catch (error) {
@@ -39,3 +39,4 @@ module.exports = {
         }
     }
 };
+
