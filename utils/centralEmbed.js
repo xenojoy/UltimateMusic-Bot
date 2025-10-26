@@ -7,6 +7,19 @@ class CentralEmbedHandler {
         this.client = client;
     }
 
+
+    validateThumbnail(thumbnail) {
+        if (!thumbnail || typeof thumbnail !== 'string' || thumbnail.trim() === '') {
+            return null;
+        }
+        try {
+            new URL(thumbnail);
+            return thumbnail;
+        } catch {
+            return null;
+        }
+    }
+
     async createCentralEmbed(channelId, guildId) {
         try {
             const channel = await this.client.channels.fetch(channelId);
@@ -55,15 +68,14 @@ class CentralEmbedHandler {
                     }
                 )
                 .setImage('https://i.ibb.co/DDSdKy31/ezgif-8aec7517f2146d.gif')
-                .setThumbnail('https://cdn.discordapp.com/attachments/1234567890/1234567890/music_note.gif') // Add a cute music note gif
                 .setFooter({ 
                     text: 'Ultimate Music Bot • Developed By GlaceYT!',
                     iconURL: this.client.user.displayAvatarURL()
                 })
                 .setTimestamp();
+
             const message = await channel.send({ embeds: [embed] });
             
-       
             await Server.findByIdAndUpdate(guildId, {
                 'centralSetup.embedId': message.id,
                 'centralSetup.channelId': channelId
@@ -77,11 +89,8 @@ class CentralEmbedHandler {
         }
     }
 
-    
     async resetAllCentralEmbedsOnStartup() {
         try {
-            
-         
             const servers = await Server.find({
                 'centralSetup.enabled': true,
                 'centralSetup.embedId': { $exists: true, $ne: null }
@@ -92,11 +101,9 @@ class CentralEmbedHandler {
 
             for (const serverConfig of servers) {
                 try {
-               
                     const guild = this.client.guilds.cache.get(serverConfig._id);
                     if (!guild) {
                         console.log(`⚠️ Bot no longer in guild ${serverConfig._id}, cleaning up database...`);
-                    
                         await Server.findByIdAndUpdate(serverConfig._id, {
                             'centralSetup.enabled': false,
                             'centralSetup.embedId': null
@@ -104,7 +111,6 @@ class CentralEmbedHandler {
                         continue;
                     }
 
-               
                     const channel = await this.client.channels.fetch(serverConfig.centralSetup.channelId).catch(() => null);
                     if (!channel) {
                         console.log(`⚠️ Central channel not found in ${guild.name}, cleaning up...`);
@@ -115,38 +121,29 @@ class CentralEmbedHandler {
                         continue;
                     }
 
-                 
                     const botMember = guild.members.me;
                     if (!channel.permissionsFor(botMember).has(['SendMessages', 'EmbedLinks'])) {
                         console.log(`⚠️ Missing permissions in ${guild.name}, skipping...`);
                         continue;
                     }
 
-                   
                     const message = await channel.messages.fetch(serverConfig.centralSetup.embedId).catch(() => null);
                     if (!message) {
                         console.log(`⚠️ Central embed not found in ${guild.name}, creating new one...`);
-                       
                         const newMessage = await this.createCentralEmbed(channel.id, guild.id);
                         if (newMessage) {
                             resetCount++;
-                           // console.log(`✅ Created new central embed in ${guild.name}`);
                         }
                         continue;
                     }
 
-              
                     await this.updateCentralEmbed(serverConfig._id, null);
                     resetCount++;
-                   // console.log(`✅ Reset central embed in ${guild.name}`);
 
                     await new Promise(resolve => setTimeout(resolve, 100));
 
                 } catch (error) {
                     errorCount++;
-                  //  console.error(`❌ Error resetting embed in guild ${serverConfig._id}:`, error.message);
-                    
-              
                     if (error.code === 50001 || error.code === 10003 || error.code === 50013) {
                         await Server.findByIdAndUpdate(serverConfig._id, {
                             'centralSetup.enabled': false,
@@ -156,20 +153,11 @@ class CentralEmbedHandler {
                 }
             }
 
-            if (resetCount > 0) {
-                //console.log(`🎵 Successfully reset ${resetCount} central embeds`);
-            }
-            if (errorCount > 0) {
-               // console.log(`⚠️ ${errorCount} embeds had errors during reset`);
-            }
-            if (resetCount === 0 && errorCount === 0) {
-               // console.log('ℹ️ No central embeds found to reset');
-            }
-
         } catch (error) {
             console.error('❌ Error during central embed auto-reset:', error);
         }
     }
+
     async updateCentralEmbed(guildId, trackInfo = null) {
         try {
             const serverConfig = await Server.findById(guildId);
@@ -181,13 +169,12 @@ class CentralEmbedHandler {
             let embed, components = [];
             
             if (trackInfo) {
-              
                 const statusEmoji = trackInfo.paused ? '⏸️' : '▶️';
                 const statusText = trackInfo.paused ? 'Paused' : 'Now Playing';
                 const loopEmoji = this.getLoopEmoji(trackInfo.loop);
+                const embedColor = trackInfo.paused ? 0xFFA500 : 0x9966ff;
                 
-             
-                const embedColor = trackInfo.paused ? 0xFFA500 :   0x9966ff;
+                const validThumbnail = this.validateThumbnail(trackInfo.thumbnail);
                 
                 embed = new EmbedBuilder()
                     .setAuthor({ 
@@ -206,17 +193,25 @@ class CentralEmbedHandler {
                         '🎶 *Enjoying the vibes? Type more song names below to keep the party going!*'
                     ].join('\n'))
                     .setColor(embedColor)
-                    .setThumbnail(trackInfo.thumbnail || 'https://cdn.discordapp.com/emojis/896724352949706762.gif')
-                    .setImage(trackInfo.paused ? null : 'https://i.ibb.co/KzbPV8jd/aaa.gif')
                     .setFooter({ 
-                        text: `Ultimate Music Bot • ${statusText} Developed By GlaceYT`,
+                        text: `Ultimate Music Bot • ${statusText} • Developed By GlaceYT`,
                         iconURL: this.client.user.displayAvatarURL()
                     })
                     .setTimestamp();
+
+                // Only set thumbnail if we have a valid URL
+                if (validThumbnail) {
+                    embed.setThumbnail(validThumbnail);
+                }
+
+              
+                if (!trackInfo.paused) {
+                    embed.setImage('https://i.ibb.co/KzbPV8jd/aaa.gif');
+                }
             
                 components = this.createAdvancedControlButtons(trackInfo);
             } else {
-           
+               
                 embed = new EmbedBuilder()
                 .setAuthor({ name: 'Ultimate Music Control Center', iconURL: 'https://cdn.discordapp.com/emojis/896724352949706762.gif', url: 'https://discord.gg/xQF9f9yUEM' })
                 .setDescription([
@@ -261,14 +256,12 @@ class CentralEmbedHandler {
                     }
                 )
                 .setImage('https://i.ibb.co/DDSdKy31/ezgif-8aec7517f2146d.gif')
-                .setThumbnail('https://cdn.discordapp.com/attachments/1234567890/1234567890/music_note.gif') // Add a cute music note gif
                 .setFooter({ 
                     text: 'Ultimate Music Bot • Developed By GlaceYT!',
                     iconURL: this.client.user.displayAvatarURL()
                 })
                 .setTimestamp();
 
-         
                 components = [];
             }
 
@@ -279,10 +272,8 @@ class CentralEmbedHandler {
         }
     }
 
-
     createAdvancedControlButtons(trackInfo) {
         if (!trackInfo) return [];
-
 
         const row1 = new ActionRowBuilder()
             .addComponents(
@@ -301,11 +292,10 @@ class CentralEmbedHandler {
                     .setEmoji('🛑')
                     .setStyle(ButtonStyle.Danger),
                     
-                    new ButtonBuilder()
+                new ButtonBuilder()
                     .setCustomId('music_queue')
                     .setEmoji('📜')
                     .setStyle(ButtonStyle.Success),
-                    
                     
                 new ButtonBuilder()
                     .setLabel('\u200B\u200BLoop\u200B')
@@ -313,7 +303,6 @@ class CentralEmbedHandler {
                     .setEmoji(this.getLoopEmoji(trackInfo.loop))
                     .setStyle(ButtonStyle.Primary)
             );
-
 
         const row2 = new ActionRowBuilder()
             .addComponents(
@@ -326,7 +315,8 @@ class CentralEmbedHandler {
                     .setCustomId('music_volume_up')
                     .setEmoji('🔊')
                     .setStyle(ButtonStyle.Secondary),
-                    new ButtonBuilder()
+
+                new ButtonBuilder()
                     .setCustomId('music_clear')
                     .setEmoji('🗑️')
                     .setStyle(ButtonStyle.Secondary),
@@ -344,7 +334,6 @@ class CentralEmbedHandler {
 
         return [row1, row2];
     }
-
 
     getLoopEmoji(loopMode) {
         switch (loopMode) {
