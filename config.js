@@ -30,10 +30,10 @@ class EnterpriseConfigurationManager {
              * Configure your Lavalink server for audio processing
              */
            lavalink: {
-                host: EnvironmentVariableProcessor.LAVALINK_HOST || "de-01.strixnodes.com", 
-                port: EnvironmentVariableProcessor.LAVALINK_PORT || 2010,       
-                password: EnvironmentVariableProcessor.LAVALINK_PASSWORD || "glace", 
-                secure: EnvironmentVariableProcessor.LAVALINK_SECURE === 'true' || false
+                host: EnvironmentVariableProcessor.LAVALINK_HOST ||  "89.106.84.47", 
+                port: EnvironmentVariableProcessor.LAVALINK_PORT || "2555",       
+                password: EnvironmentVariableProcessor.LAVALINK_PASSWORD || "https://discord.gg/archost", 
+                secure: EnvironmentVariableProcessor.LAVALINK_SECURE === 'false' || true
             },     
             /**
              * 🤖 BOT BEHAVIOR CONFIGURATION
